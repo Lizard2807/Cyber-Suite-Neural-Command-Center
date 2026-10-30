@@ -360,7 +360,6 @@ def home():
         for r in ricette_items:
             r_id, r_titolo, r_cat, r_utensili, r_ingr, r_proc = r[0], r[1], r[2], r[3], r[4], r[5]
             
-            # Ingredienti checkbox
             ingr_li = ""
             for idx, ing in enumerate([i.strip() for i in r_ingr.split(",") if i.strip()]):
                 ing_id = f"ricetta_{r_id}_{idx}"
@@ -451,6 +450,31 @@ def home():
                 --accent-border: rgba(236, 72, 153, 0.3);
                 --accent-glow: rgba(236, 72, 153, 0.5);
                 --gradient-start: #581c87;
+            }}
+            /* --- 3 NUOVI TEMI EXTRA --- */
+            body.theme-cyberpunk {{
+                --bg-color: #0d0221;
+                --panel-bg: rgba(25, 9, 51, 0.9);
+                --accent-color: #00ffcc;
+                --accent-border: rgba(255, 0, 127, 0.4);
+                --accent-glow: rgba(255, 0, 127, 0.6);
+                --gradient-start: #3b0764;
+            }}
+            body.theme-oled {{
+                --bg-color: #000000;
+                --panel-bg: rgba(10, 10, 10, 0.95);
+                --accent-color: #ffffff;
+                --accent-border: rgba(255, 255, 255, 0.2);
+                --accent-glow: rgba(255, 255, 255, 0.3);
+                --gradient-start: #111111;
+            }}
+            body.theme-sunset {{
+                --bg-color: #1a0b2e;
+                --panel-bg: rgba(43, 16, 85, 0.85);
+                --accent-color: #ff9e00;
+                --accent-border: rgba(255, 94, 98, 0.4);
+                --accent-glow: rgba(255, 94, 98, 0.5);
+                --gradient-start: #4a154b;
             }}
 
             * {{ box-sizing: border-box; }}
@@ -646,7 +670,7 @@ def home():
 
             function cambiaTema(tema) {{
                 document.body.className = '';
-                if (tema !== 'cyberpunk') document.body.classList.add('theme-' + tema);
+                if (tema !== 'default') document.body.classList.add('theme-' + tema);
                 localStorage.setItem('cyber_theme', tema);
             }}
             function caricaTemaSalvato() {{
@@ -714,14 +738,19 @@ def home():
                 document.getElementById('pomodoro-toggle-btn').innerHTML = '⚡ Avvia Focus';
             }}
 
-            // --- Timer Allenamento & Cronometro ---
+            // --- Timer Allenamento Personalizzabile & Cronometro ---
             let allenamentoInterval = null;
             let allenamentoTimeLeft = 0;
             let allenamentoRunning = false;
 
-            function selezionaTempoAllenamento(minuti) {{
+            function avviaTimerAllenamentoCustom() {{
+                let inputVal = parseInt(document.getElementById('allenamento-custom-input').value);
+                if (!inputVal || inputVal <= 0) {{
+                    alert('Inserisci un numero valido di minuti!');
+                    return;
+                }}
                 clearInterval(allenamentoInterval);
-                allenamentoTimeLeft = minuti * 60;
+                allenamentoTimeLeft = inputVal * 60;
                 allenamentoRunning = true;
                 document.getElementById('allenamento-timer-display').innerText = formatTime(allenamentoTimeLeft);
                 
@@ -773,36 +802,56 @@ def home():
                 document.getElementById('crono-toggle-btn').innerHTML = '▶️ Avvia Crono';
             }}
 
-            // --- Timer Cottura Cucina a Tendina ---
-            let cucinaInterval = null;
-            let cucinaTimeLeft = 0;
-            let cucinaRunning = false;
+            // --- Multi-Timer Dinamico Cucina ---
+            let activeTimers = [];
 
-            function avviaTimerCotturaTendina() {{
-                let select = document.getElementById('cucina-select-minuti');
-                let minuti = parseInt(select.value);
-                clearInterval(cucinaInterval);
-                cucinaTimeLeft = minuti * 60;
-                cucinaRunning = true;
-                document.getElementById('cucina-timer-display').innerText = formatTime(cucinaTimeLeft);
+            function aggiungiMultiTimerCucina() {{
+                let nome = document.getElementById('cucina-timer-nome').value.trim() || 'Timer Cucina';
+                let minuti = parseInt(document.getElementById('cucina-timer-minuti').value);
+                if (!minuti || minuti <= 0) {{
+                    alert('Inserisci minuti validi per il timer!');
+                    return;
+                }}
+                let totalSec = minuti * 60;
+                let timerId = Date.now();
+
+                let container = document.getElementById('lista-multi-timers');
+                let box = document.createElement('div');
+                box.id = `timer_box_${{timerId}}`;
+                box.style.cssText = "background: rgba(15,23,42,0.8); border: 1px solid rgba(245,158,11,0.4); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;";
                 
-                cucinaInterval = setInterval(() => {{
-                    if (cucinaTimeLeft > 0) {{
-                        cucinaTimeLeft--;
-                        document.getElementById('cucina-timer-display').innerText = formatTime(cucinaTimeLeft);
+                box.innerHTML = `
+                    <div>
+                        <div style="color: #f59e0b; font-weight: bold; font-size: 12px;">⏰ ${{nome}}</div>
+                        <div id="countdown_${{timerId}}" style="color: #fff; font-size: 18px; font-family: monospace;">${{formatTime(totalSec)}}</div>
+                    </div>
+                    <button type="button" onclick="rimuoviMultiTimer(${{timerId}})" style="background: rgba(244,63,94,0.2); color: #f43f5e; border: 1px solid #f43f5e; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;">Elimina</button>
+                `;
+                container.prepend(box);
+
+                let interval = setInterval(() => {{
+                    if (totalSec > 0) {{
+                        totalSec--;
+                        let el = document.getElementById(`countdown_${{timerId}}`);
+                        if (el) el.innerText = formatTime(totalSec);
                     }} else {{
-                        clearInterval(cucinaInterval);
-                        cucinaRunning = false;
-                        alert('🔥 Timer Cottura Scaduto! Pronto!');
-                        document.getElementById('cucina-timer-display').innerText = "00:00";
+                        clearInterval(interval);
+                        alert(`🔥 Timer "${{nome}}" scaduto! Pronto!`);
                     }}
                 }}, 1000);
+
+                activeTimers.push({{ id: timerId, interval: interval }});
+                document.getElementById('cucina-timer-nome').value = '';
             }}
 
-            function stopTimerCottura() {{
-                clearInterval(cucinaInterval);
-                cucinaRunning = false;
-                document.getElementById('cucina-timer-display').innerText = "00:00";
+            function rimuoviMultiTimer(timerId) {{
+                let obj = activeTimers.find(t => t.id === timerId);
+                if (obj) {{
+                    clearInterval(obj.interval);
+                    activeTimers = activeTimers.filter(t => t.id !== timerId);
+                }}
+                let box = document.getElementById(`timer_box_${{timerId}}`);
+                if (box) box.remove();
             }}
 
             function toggleArticolo(artId) {{
@@ -923,14 +972,16 @@ def home():
                 <div class="dashboard-box">
                     <label>Interfaccia Tema</label>
                     <select id="theme-switcher" class="theme-selector" onchange="cambiaTema(this.value)">
-                        <option value="cyberpunk">⚡ Cyber Neon</option>
+                        <option value="cyberpunk">⚡ Cyberpunk Neon</option>
                         <option value="matrix">💻 Matrix Green</option>
                         <option value="synthwave">🌆 Synthwave</option>
+                        <option value="oled">🖤 OLED Minimal</option>
+                        <option value="sunset">🌅 Sunset Synthwave</option>
                     </select>
                 </div>
             </div>
 
-            <!-- MENU TAB AGGIORNATO -->
+            <!-- MENU TAB -->
             <div class="nav-tabs">
                 <button class="tab-btn active" onclick="switchTab('tab-agenda', this)">📅 Agenda</button>
                 <button class="tab-btn" onclick="switchTab('tab-spesa', this)">🛒 Spesa</button>
@@ -1100,7 +1151,7 @@ def home():
                 {lista_pomodoro_html}
             </div>
 
-            <!-- SEZIONE 6: ALLENAMENTO & RECORD (NUOVA CONFIGURAZIONE) -->
+            <!-- SEZIONE 6: ALLENAMENTO & RECORD (CON TIMER PERSONALIZZABILE) -->
             <div id="tab-allenamento" class="section-content">
                 <!-- TABELLA RECORD PERSONALI -->
                 <div class="cyber-card" style="margin-bottom: 16px; border-left: 4px solid #22c55e;">
@@ -1115,20 +1166,17 @@ def home():
                     </form>
                 </div>
 
-                <!-- TIMER & CRONOMETRO ALLENAMENTO -->
+                <!-- TIMER & CRONOMETRO ALLENAMENTO PERSONALIZZABILE -->
                 <div class="cyber-card" style="text-align: center; padding: 16px; margin-bottom: 16px; border-left: 4px solid #22c55e;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div>
                             <div style="font-size: 9px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">⏱️ Timer Sessione</div>
                             <div id="allenamento-timer-display" style="font-size: 28px; font-weight: 900; color: #fff; font-family: monospace; margin-bottom: 8px;">00:00</div>
-                            <select id="allenamento-select-minuti" style="margin-bottom: 6px; font-size: 11px; padding: 4px;">
-                                <option value="30">30 minuti</option>
-                                <option value="45">45 minuti</option>
-                                <option value="60" selected>60 minuti</option>
-                                <option value="90">90 minuti</option>
-                            </select>
+                            <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+                                <input type="number" id="allenamento-custom-input" placeholder="Min" value="45" min="1" max="180" style="margin-bottom:0; font-size:11px; padding:4px; text-align:center;">
+                            </div>
                             <div style="display: flex; gap: 4px;">
-                                <button type="button" onclick="selezionaTempoAllenamento(parseInt(document.getElementById('allenamento-select-minuti').value))" style="background: rgba(34,197,94,0.2); color: #22c55e; border: 1px solid #22c55e; padding: 4px; border-radius: 4px; font-size: 9px; font-weight: bold; flex:1; cursor: pointer;">Avvia</button>
+                                <button type="button" onclick="avviaTimerAllenamentoCustom()" style="background: rgba(34,197,94,0.2); color: #22c55e; border: 1px solid #22c55e; padding: 4px; border-radius: 4px; font-size: 9px; font-weight: bold; flex:1; cursor: pointer;">Avvia</button>
                                 <button type="button" onclick="fermaTimerAllenamento()" style="background: rgba(244,63,94,0.1); color: #f43f5e; border: 1px solid rgba(244,63,94,0.3); padding: 4px; border-radius: 4px; font-size: 9px; font-weight: bold; flex:1; cursor: pointer;">Stop</button>
                             </div>
                         </div>
@@ -1190,26 +1238,17 @@ def home():
                 {lista_armadio_html}
             </div>
 
-            <!-- SEZIONE 8: CUCINA & RICETTE (TIMER A TENDINA E UTENSILI) -->
+            <!-- SEZIONE 8: CUCINA & MULTI-TIMER -->
             <div id="tab-cucina" class="section-content">
-                <!-- TIMER COTTURA A TENDINA -->
-                <div class="cyber-card" style="text-align: center; padding: 20px; margin-bottom: 16px; border-left: 4px solid #f59e0b;">
-                    <div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px;">⏱️ Timer Cottura Cucina</div>
-                    <div id="cucina-timer-display" style="font-size: 42px; font-weight: 900; color: #ffffff; font-family: monospace; text-shadow: 0 0 20px rgba(245,158,11,0.5); margin-bottom: 14px;">00:00</div>
-                    
-                    <div style="display: flex; gap: 6px; justify-content: center; align-items: center; margin-bottom: 10px;">
-                        <select id="cucina-select-minuti" style="margin-bottom: 0; width: 140px; font-size: 12px; padding: 6px;">
-                            <option value="3">3 minuti (Caffè)</option>
-                            <option value="9">9 minuti (Pasta)</option>
-                            <option value="15">15 minuti</option>
-                            <option value="20">20 minuti (Forno)</option>
-                            <option value="30">30 minuti</option>
-                            <option value="45">45 minuti</option>
-                            <option value="60">60 minuti</option>
-                        </select>
-                        <button type="button" onclick="avviaTimerCotturaTendina()" style="background: #f59e0b; color: #05070c; border: none; padding: 8px 14px; border-radius: 6px; font-size: 11px; font-weight: 900; cursor: pointer;">Avvia</button>
-                        <button type="button" onclick="stopTimerCottura()" style="background: rgba(244,63,94,0.1); color: #f43f5e; border: 1px solid rgba(244,63,94,0.3); padding: 8px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Stop</button>
+                <!-- MULTI-TIMER DINAMICO CUCINA -->
+                <div class="cyber-card" style="padding: 16px; margin-bottom: 16px; border-left: 4px solid #f59e0b;">
+                    <div style="font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">⏱️ Multi-Timer Cucina Dinamico</div>
+                    <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+                        <input type="text" id="cucina-timer-nome" placeholder="Nome (es. Pasta)" style="flex: 2; margin-bottom: 0; padding: 6px; font-size: 12px;">
+                        <input type="number" id="cucina-timer-minuti" placeholder="Min" min="1" max="180" style="flex: 1; margin-bottom: 0; padding: 6px; font-size: 12px;">
+                        <button type="button" onclick="aggiungiMultiTimerCucina()" style="background: #f59e0b; color: #05070c; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 900; cursor: pointer;">+ Aggiungi</button>
                     </div>
+                    <div id="lista-multi-timers"></div>
                 </div>
 
                 <!-- NUOVA RICETTA -->
@@ -1409,6 +1448,7 @@ DESCRIPTION:{evento[3]}
 END:VEVENT
 END:VCALENDAR"""
     return Response(content=ics_content, media_type="text/calendar", headers={"Content-Disposition": f"attachment; filename=impegno-{evento_id}.ics"})
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
